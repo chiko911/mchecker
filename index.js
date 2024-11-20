@@ -56,7 +56,7 @@ async function checkTokens(tokens) {
 // Запуск регулярной проверки
 setInterval(() => {
   // Получаем список токенов через API
-  axios.get('https://example.com/api/tokens') // Замените на ваш endpoint
+  axios.get('/api/tokens') // Замените на ваш endpoint
     .then(response => {
       const tokens = response.data.tokens; // Предположим, что токены приходят в поле "tokens"
       checkTokens(tokens);
