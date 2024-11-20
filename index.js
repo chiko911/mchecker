@@ -9,7 +9,6 @@ app.use(express.json());
 
 // Создание экземпляра Telegram-бота
 const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: true });
-const chatId = process.env.TELEGRAM_CHAT_ID;
 
 // Подключение к базе данных
 const client = new MongoClient(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true });
@@ -23,7 +22,7 @@ client.connect()
   .catch(err => console.error(err));
 
 // Функция для проверки миграции токена
-async function checkTokenMigration(token) {
+async function checkTokenMigration(token, chatId) {
   try {
     const response = await axios.get(`https://api-v3.raydium.io/mint/ids?mints=${token}`);
     const data = response.data;
@@ -43,7 +42,7 @@ async function checkTokenMigration(token) {
 
 // Обработчик команды от пользователя
 bot.onText(/\/migrate (\w+)/, async (msg, match) => {
-  const chatId = msg.chat.id;
+  const chatId = msg.chat.id;  // Динамически получаем chatId
   const token = match[1];  // Получаем токен из сообщения
 
   if (!token) {
@@ -58,7 +57,7 @@ bot.onText(/\/migrate (\w+)/, async (msg, match) => {
     await collection.insertOne({ token });
     console.log(`Токен ${token} добавлен в базу`);
     // Сразу проверяем миграцию токена
-    await checkTokenMigration(token);
+    await checkTokenMigration(token, chatId);
     bot.sendMessage(chatId, `Токен ${token} добавлен для проверки миграции`);
   } else {
     bot.sendMessage(chatId, `Токен ${token} уже существует в базе`);
