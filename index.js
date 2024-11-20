@@ -3,11 +3,11 @@ const { Client } = pg;  // Извлекаем Client из дефолтного �
 import fetch from 'node-fetch'; // Для работы с API
 import TelegramBot from 'node-telegram-bot-api'; // Для Telegram API
 
-const token = 'YOUR_BOT_TOKEN';  // Укажите токен вашего бота
+const token = process.env.TELEGRAM_BOT_TOKEN;  // Укажите токен вашего бота
 const bot = new TelegramBot(token, { polling: true });
 
 const client = new Client({
-  connectionString: 'postgres://tokensdb_user:your_password@localhost:5432/tokensdb',
+  connectionString: process.env.DATABASE_URL,  // Используем строку подключения из переменных окружения
 });
 client.connect();
 
