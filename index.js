@@ -1,70 +1,92 @@
-const express = require('express');
-const MongoClient = require('mongodb').MongoClient;
-const axios = require('axios');
+const { Client } = require('pg'); // Импортируем клиент PostgreSQL
+const fetch = require('node-fetch');
 const TelegramBot = require('node-telegram-bot-api');
-require('dotenv').config();
 
-const app = express();
-app.use(express.json());
+// Установите ваш токен Telegram бота
+const token = process.env.TELEGRAM_BOT_TOKEN;
+const bot = new TelegramBot(token, { polling: true });
 
-// Создание экземпляра Telegram-бота
-const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: true });
-
-// Подключение к базе данных
-const client = new MongoClient(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true });
-let db;
-
-client.connect()
-  .then(() => {
-    db = client.db('migration_db');
-    console.log('Database connected');
-  })
-  .catch(err => console.error(err));
-
-// Функция для проверки миграции токена
-async function checkTokenMigration(token, chatId) {
-  try {
-    const response = await axios.get(`https://api-v3.raydium.io/mint/ids?mints=${token}`);
-    const data = response.data;
-
-    if (data.success && data.data && data.data[0] !== null) {
-      // Если миграция прошла успешно, отправляем сообщение в Telegram
-      await bot.sendMessage(chatId, `Токен ${token} успешно мигрировал!`);
-      // Удаляем токен из базы данных
-      const collection = db.collection('tokens');
-      await collection.deleteOne({ token });
-      console.log(`Токен ${token} мигрировал и был удален из базы`);
-    }
-  } catch (error) {
-    console.error(`Ошибка при проверке миграции токена ${token}: `, error);
-  }
-}
-
-// Обработчик команды от пользователя
-bot.onText(/\/migrate (\w+)/, async (msg, match) => {
-  const chatId = msg.chat.id;  // Динамически получаем chatId
-  const token = match[1];  // Получаем токен из сообщения
-
-  if (!token) {
-    return bot.sendMessage(chatId, 'Пожалуйста, укажите токен');
-  }
-
-  // Добавляем токен в базу данных
-  const collection = db.collection('tokens');
-  const exists = await collection.findOne({ token });
-
-  if (!exists) {
-    await collection.insertOne({ token });
-    console.log(`Токен ${token} добавлен в базу`);
-    // Сразу проверяем миграцию токена
-    await checkTokenMigration(token, chatId);
-    bot.sendMessage(chatId, `Токен ${token} добавлен для проверки миграции`);
-  } else {
-    bot.sendMessage(chatId, `Токен ${token} уже существует в базе`);
-  }
+// Создание клиента для работы с PostgreSQL
+const client = new Client({
+    user: process.env.PG_USER,
+    host: process.env.PG_HOST,
+    database: process.env.PG_DB,
+    password: process.env.PG_PASSWORD,
+    port: process.env.PG_PORT,
 });
 
-// Запуск приложения
-app.listen(3000, () => {
-  console.log('Server running on port 3000');
+client.connect(); // Подключаемся к базе данных PostgreSQL
+
+// Проверка миграции токенов через API
+async function checkTokenMigration(token) {
+    const url = `https://api-v3.raydium.io/mint/ids?mints=${token}`;
+    const response = await fetch(url);
+    const data = await response.json();
+
+    // Если массив data не пустой, значит миграция прошла успешно
+    if (data.success && data.data.length > 0) {
+        return true;  // Успешная миграция
+    }
+    return false;  // Миграция не прошла
+}
+
+// Функция для добавления токена в базу данных
+async function addTokenToDatabase(token) {
+    const query = 'INSERT INTO tokens (token, checked) VALUES ($1, false)';
+    await client.query(query, [token]);
+}
+
+// Функция для получения всех токенов из базы данных
+async function getTokensFromDatabase() {
+    const res = await client.query('SELECT * FROM tokens WHERE checked = false');
+    return res.rows;
+}
+
+// Функция для обновления статуса токена в базе данных
+async function updateTokenStatus(token, status) {
+    const query = 'UPDATE tokens SET checked = $1 WHERE token = $2';
+    await client.query(query, [status, token]);
+}
+
+// Функция отправки сообщения в Telegram
+async function sendTelegramMessage(chatId, message) {
+    await bot.sendMessage(chatId, message);
+}
+
+// Основной цикл для проверки миграции токенов
+async function checkTokens() {
+    const tokens = await getTokensFromDatabase();
+
+    for (const token of tokens) {
+        const migrated = await checkTokenMigration(token.token);
+
+        if (migrated) {
+            // Отправляем сообщение в чат Telegram, если миграция прошла успешно
+            const chatId = token.chat_id; // Получаем chat_id из базы данных
+            await sendTelegramMessage(chatId, `Токен ${token.token} успешно мигрировал!`);
+
+            // Обновляем статус токена в базе данных
+            await updateTokenStatus(token.token, true);  // Устанавливаем checked = true
+        }
+    }
+}
+
+// Таймер для периодической проверки
+setInterval(checkTokens, 60000); // Проверяем токены каждую минуту
+
+// Обработчик команд от бота
+bot.onText(/\/addtoken (.+)/, async (msg, match) => {
+    const chatId = msg.chat.id;
+    const token = match[1];
+
+    // Добавляем токен в базу данных
+    await addTokenToDatabase(token);
+
+    // Отправляем подтверждение
+    await sendTelegramMessage(chatId, `Токен ${token} добавлен в очередь для проверки!`);
+});
+
+// Закрытие подключения к базе данных при завершении работы
+process.on('exit', () => {
+    client.end();
 });
