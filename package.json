@@ -3,18 +3,18 @@
   "version": "1.0.0",
   "description": "Track token migrations using Raydium API",
   "main": "index.js",
+  "type": "module", 
   "dependencies": {
-    "pg": "^8.7.1",
+    "express": "^4.17.1",
+    "pg": "^8.10.0",
     "node-fetch": "^3.0.0",
     "node-telegram-bot-api": "^0.53.0",
-    "dotenv": "^10.0.0",
-    "express": "^4.17.1"
+    "dotenv": "^10.0.0"
   },
   "scripts": {
     "start": "node index.js"
   },
   "engines": {
-    "node": "16.x"
-  },
-  "type": "module"
+    "node": "16.20.1"
+  }
 }
