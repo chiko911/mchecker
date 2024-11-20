@@ -1,4 +1,5 @@
-import { Client } from 'pg'; // Для работы с PostgreSQL
+import pg from 'pg';  // Импортируем pg как default
+const { Client } = pg;  // Извлекаем Client из дефолтного импорта
 import fetch from 'node-fetch'; // Для работы с API
 import TelegramBot from 'node-telegram-bot-api'; // Для Telegram API
 
