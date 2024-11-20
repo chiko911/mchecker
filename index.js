@@ -52,7 +52,6 @@ bot.onText(/\/start/, (msg) => {
 // Команда /migrate $token
 bot.onText(/\/migrate (.+)/, async (msg, match) => {
   const chatId = msg.chat.id;
-  const firstName = msg.from.first_name || 'друг';
   const mintId = match[1].trim(); // Получаем mint_id из команды
 
   if (!mintId) {
@@ -60,28 +59,36 @@ bot.onText(/\/migrate (.+)/, async (msg, match) => {
     return;
   }
 
-  // Предположим, что символ можно извлечь из mintId или установить как пустую строку.
-  const symbol = mintId;  // Это место, где вы можете получить символ токена. Если нет, используйте пустую строку: ""
+  console.log(`Получен запрос на добавление токена с mint_id ${mintId}`);
 
+  // Проверяем, существует ли токен с таким mint_id в базе
   try {
-    // Добавляем mint_id и symbol в базу данных
-    const result = await client.query(
-      'INSERT INTO tokens (mint_id, symbol) VALUES ($1, $2) RETURNING id',
-      [mintId, symbol]
-    );
-    const tokenId = result.rows[0].id;
+    const result = await client.query('SELECT * FROM tokens WHERE mint_id = $1', [mintId]);
 
-    // Отправляем сообщение в личку
-    bot.sendMessage(chatId, `Токен ${mintId} добавлен в базу данных.`);
-    console.log(`mint_id ${mintId} добавлен в базу с ID ${tokenId}`);
+    if (result.rows.length > 0) {
+      // Если токен уже существует, отправляем сообщение
+      bot.sendMessage(chatId, `Токен с mint_id ${mintId} уже существует в базе данных.`);
+      console.log(`Токен с mint_id ${mintId} уже есть в базе.`);
+    } else {
+      // Добавляем mint_id в базу данных
+      const insertResult = await client.query(
+        'INSERT INTO tokens (mint_id) VALUES ($1) RETURNING id',
+        [mintId]
+      );
+      const tokenId = insertResult.rows[0].id;
 
-    // Если запрос из группы, отправляем сообщение в группу
-    if (msg.chat.type === 'group' || msg.chat.type === 'supergroup') {
-      bot.sendMessage(msg.chat.id, `Токен ${mintId} добавлен в базу данных.`);
+      // Отправляем сообщение в личку
+      bot.sendMessage(chatId, `Токен с mint_id ${mintId} добавлен в базу данных.`);
+      console.log(`mint_id ${mintId} добавлен в базу с ID ${tokenId}`);
+
+      // Если запрос из группы, отправляем сообщение в группу
+      if (msg.chat.type === 'group' || msg.chat.type === 'supergroup') {
+        bot.sendMessage(msg.chat.id, `Токен с mint_id ${mintId} добавлен в базу данных.`);
+      }
     }
   } catch (err) {
     console.error('Ошибка добавления токена в базу:', err);
-    bot.sendMessage(chatId, `Ошибка: не удалось добавить токен ${mintId}.`);
+    bot.sendMessage(chatId, `Ошибка: не удалось добавить токен с mint_id ${mintId}.`);
   }
 });
 
@@ -104,21 +111,21 @@ const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 // Постоянная проверка токенов в базе
 const checkMigrationStatusContinuously = async () => {
   try {
-    const result = await client.query('SELECT symbol, mint_id FROM tokens');
+    const result = await client.query('SELECT mint_id FROM tokens');
 
     for (const row of result.rows) {
-      console.log(`Проверяем токен ${row.symbol} на миграцию...`);
+      console.log(`Проверяем токен с mint_id ${row.mint_id} на миграцию...`);
       const migrationStatus = await getMigrationStatus([row.mint_id]);
 
       if (migrationStatus.length > 0) {
-        console.log(`Токен ${row.symbol} мигрирован!`);
+        console.log(`Токен с mint_id ${row.mint_id} мигрирован!`);
 
         // Отправляем сообщение администратору
-        bot.sendMessage(process.env.TELEGRAM_ADMIN_CHAT_ID, `Токен ${row.symbol} был мигрирован!`);
+        bot.sendMessage(process.env.TELEGRAM_ADMIN_CHAT_ID, `Токен с mint_id ${row.mint_id} был мигрирован!`);
 
         // Удаляем токен из базы данных
-        await client.query('DELETE FROM tokens WHERE symbol = $1', [row.symbol]);
-        console.log(`Токен ${row.symbol} удален из базы.`);
+        await client.query('DELETE FROM tokens WHERE mint_id = $1', [row.mint_id]);
+        console.log(`Токен с mint_id ${row.mint_id} удален из базы.`);
 
         // Пауза в 500 мс между проверками токенов
         await sleep(500);
