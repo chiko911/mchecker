@@ -52,16 +52,17 @@ bot.onText(/\/start/, (msg) => {
 // Команда /migrate $token
 bot.onText(/\/migrate (.+)/, async (msg, match) => {
   const chatId = msg.chat.id;
+  const firstName = msg.from.first_name || 'друг';
   const mintId = match[1].trim(); // Получаем mint_id из команды
 
   if (!mintId) {
     bot.sendMessage(chatId, `Ошибка: mint_id обязателен.`);
     return;
   }
-  
+
   // Предположим, что символ можно извлечь из mintId или установить как пустую строку.
   const symbol = mintId;  // Это место, где вы можете получить символ токена. Если нет, используйте пустую строку: ""
-  
+
   try {
     // Добавляем mint_id и symbol в базу данных
     const result = await client.query(
@@ -72,6 +73,11 @@ bot.onText(/\/migrate (.+)/, async (msg, match) => {
 
     bot.sendMessage(chatId, `Токен ${mintId} добавлен в базу данных.`);
     console.log(`mint_id ${mintId} добавлен в базу с ID ${tokenId}`);
+
+    // Отправляем ответ в группу, если это группа
+    if (msg.chat.type === 'group' || msg.chat.type === 'supergroup') {
+      bot.sendMessage(msg.chat.id, `Токен ${mintId} добавлен в базу данных.`);
+    }
   } catch (err) {
     console.error('Ошибка добавления токена в базу:', err);
     bot.sendMessage(chatId, `Ошибка: не удалось добавить токен ${mintId}.`);
@@ -91,6 +97,9 @@ const getMigrationStatus = async (mintIds) => {
   }
 };
 
+// Пауза в 500 мс
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
 // Постоянная проверка токенов в базе
 const checkMigrationStatusContinuously = async () => {
   try {
@@ -109,6 +118,9 @@ const checkMigrationStatusContinuously = async () => {
         // Удаляем токен из базы данных
         await client.query('DELETE FROM tokens WHERE symbol = $1', [row.symbol]);
         console.log(`Токен ${row.symbol} удален из базы.`);
+
+        // Пауза в 500 мс между проверками токенов
+        await sleep(500);
       }
     }
   } catch (error) {
