@@ -67,8 +67,8 @@ bot.onText(/\/migrate (.+)/, async (msg, match) => {
 
     if (result.rows.length > 0) {
       // Если токен уже существует, отправляем сообщение
-      bot.sendMessage(chatId, `Токен с mint_id ${mintId} уже существует в базе данных.`);
-      console.log(`Токен с mint_id ${mintId} уже есть в базе.`);
+      bot.sendMessage(chatId, `Токен ${mintId} уже существует в базе данных.`);
+      console.log(`Токен ${mintId} уже есть в базе.`);
     } else {
       // Добавляем mint_id в базу данных
       const insertResult = await client.query(
@@ -116,6 +116,8 @@ const checkMigrationStatusContinuously = async () => {
     for (const row of result.rows) {
       console.log(`Проверяем токен с mint_id ${row.mint_id} на миграцию...`);
       const migrationStatus = await getMigrationStatus([row.mint_id]);
+
+      console.log(migrationStatus)
 
       if (migrationStatus.length > 0) {
         console.log(`Токен с mint_id ${row.mint_id} мигрирован!`);
