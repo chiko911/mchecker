@@ -58,12 +58,15 @@ bot.onText(/\/migrate (.+)/, async (msg, match) => {
     bot.sendMessage(chatId, `Ошибка: mint_id обязателен.`);
     return;
   }
-
+  
+  // Предположим, что символ можно извлечь из mintId или установить как пустую строку.
+  const symbol = mintId;  // Это место, где вы можете получить символ токена. Если нет, используйте пустую строку: ""
+  
   try {
-    // Добавляем mint_id в базу данных
+    // Добавляем mint_id и symbol в базу данных
     const result = await client.query(
-      'INSERT INTO tokens (mint_id) VALUES ($1) RETURNING id',
-      [mintId]
+      'INSERT INTO tokens (mint_id, symbol) VALUES ($1, $2) RETURNING id',
+      [mintId, symbol]
     );
     const tokenId = result.rows[0].id;
 
