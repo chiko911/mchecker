@@ -66,4 +66,4 @@ async function checkAllTokens() {
 }
 
 // Запуск проверки токенов каждую минуту
-setInterval(checkAllTokens, 60000); // Проверяем каждые 60 секунд
+setInterval(checkAllTokens, 5000); // Проверяем каждые 60 секунд
