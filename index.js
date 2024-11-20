@@ -1,50 +1,54 @@
-import pkg from 'pg'; // Импорт всего пакета
-const { Client } = pkg; // Извлекаем Client из всего пакета
-import TelegramBot from 'node-telegram-bot-api'; // Для работы с Telegram ботом
-import express from 'express'; // Для создания HTTP-сервера
+import express from 'express'; // Импортируем express
+import { Client } from 'pg'; // Импортируем pg для работы с PostgreSQL
+import TelegramBot from 'node-telegram-bot-api'; // Импортируем Telegram Bot API
 import dotenv from 'dotenv'; // Для работы с переменными окружения
-import fetch from 'node-fetch'; // Для выполнения HTTP-запросов
 
-dotenv.config(); // Загружаем переменные из .env
+dotenv.config(); // Загружаем переменные из .env файла
 
-// Настройка подключения к PostgreSQL
-const dbClient = new Client({
-  connectionString: process.env.DATABASE_URL, // Используем переменные окружения для подключения
+const app = express(); // Инициализируем Express приложение
+const port = process.env.PORT || 3000; // Устанавливаем порт, либо по умолчанию 3000
+
+// Подключение к PostgreSQL
+const client = new Client({
+  connectionString: process.env.DATABASE_URL, // Строка подключения из переменных окружения
   ssl: {
-    rejectUnauthorized: false, // Не проверяем сертификат SSL для PostgreSQL на Render
+    rejectUnauthorized: false, // Для работы с SSL
   },
 });
-dbClient.connect()
-  .then(() => console.log('Connected to PostgreSQL'))
-  .catch((err) => console.error('Connection error', err.stack));
 
-// Создаем Telegram бота
-const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: true });
+client.connect()
+  .then(() => {
+    console.log('Connected to PostgreSQL');
+  })
+  .catch(err => {
+    console.error('Connection error', err.stack);
+  });
 
-// Получаем порт из переменной окружения, предоставленной Render, или используем 3000 для локальной разработки
-const port = process.env.PORT || 3000;
+// Инициализация Telegram бота
+const token = process.env.TELEGRAM_BOT_TOKEN; // Токен из переменных окружения
+const bot = new TelegramBot(token, { polling: true });
 
-// Пример обработки команды бота
+// Обработка команды /start
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
-  bot.sendMessage(chatId, 'Привет! Я помогу тебе с миграцией токенов.');
+  const firstName = msg.from.first_name;
+  const greetingMessage = `Привет, ${firstName}! Я помогу тебе с миграцией токенов. Чем могу помочь?`;
+
+  bot.sendMessage(chatId, greetingMessage);
 });
 
-// Пример использования API для получения токенов
+// Маршрут для получения списка токенов
 app.get('/tokens', async (req, res) => {
   try {
-    const response = await fetch('https://api.raydium.io/tokens'); // Ваш запрос к API
-    const data = await response.json();
-    res.json(data); // Возвращаем ответ с данными
-  } catch (error) {
-    res.status(500).send('Ошибка при получении данных');
+    const result = await client.query('SELECT * FROM tokens'); // Получаем данные из базы данных
+    res.json(result.rows); // Отправляем данные в виде JSON
+  } catch (err) {
+    console.error('Error fetching tokens', err);
+    res.status(500).send('Error fetching tokens');
   }
 });
 
-// Создание Express сервера
-const app = express();
-
-// Стартуем сервер и слушаем на порту
+// Запуск сервера
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
