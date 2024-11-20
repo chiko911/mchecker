@@ -5,9 +5,6 @@ const { Telegraf } = require('telegraf');
 // Инициализация Telegram бота
 const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
 
-// Список токенов для проверки (может быть JSON-строка в .env или массив)
-let tokens = JSON.parse(process.env.TOKEN_LIST || '[]');
-
 // Интервал проверки токенов (в миллисекундах)
 const CHECK_INTERVAL = 60 * 1000; // 1 минута
 
@@ -39,8 +36,8 @@ async function notifyMigration(token) {
   }
 }
 
-// Функция проверки всех токенов
-async function checkTokens() {
+// Функция проверки токенов
+async function checkTokens(tokens) {
   for (const token of tokens) {
     // Пропускаем уже проверенные токены
     if (migratedTokens.has(token)) continue;
@@ -57,7 +54,17 @@ async function checkTokens() {
 }
 
 // Запуск регулярной проверки
-setInterval(checkTokens, CHECK_INTERVAL);
+setInterval(() => {
+  // Получаем список токенов через API
+  axios.get('https://example.com/api/tokens') // Замените на ваш endpoint
+    .then(response => {
+      const tokens = response.data.tokens; // Предположим, что токены приходят в поле "tokens"
+      checkTokens(tokens);
+    })
+    .catch(error => {
+      console.error('Error fetching tokens:', error.message);
+    });
+}, CHECK_INTERVAL);
 
 // Запуск Telegram-бота
 bot.launch().then(() => {
