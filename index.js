@@ -1,4 +1,5 @@
-import { Client } from 'pg'; // Для работы с PostgreSQL
+import pkg from 'pg'; // Импорт всего пакета
+const { Client } = pkg; // Извлекаем Client из всего пакета
 import TelegramBot from 'node-telegram-bot-api'; // Для работы с Telegram ботом
 import express from 'express'; // Для создания HTTP-сервера
 import dotenv from 'dotenv'; // Для работы с переменными окружения
