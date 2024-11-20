@@ -1,4 +1,6 @@
 import TelegramBot from 'node-telegram-bot-api';
+import express from 'express';
+import bodyParser from 'body-parser';
 import dotenv from 'dotenv';
 import pkg from 'pg';
 import fetch from 'node-fetch';
@@ -7,7 +9,7 @@ dotenv.config();
 
 const { Client } = pkg;
 
-// Подключение к PostgreSQL
+// Инициализация базы данных PostgreSQL
 const client = new Client({
   connectionString: process.env.DATABASE_URL,
   ssl: {
@@ -19,9 +21,26 @@ client.connect()
   .then(() => console.log('Connected to PostgreSQL'))
   .catch(err => console.error('Connection error', err.stack));
 
-// Инициализация Telegram бота с polling
+// Инициализация Telegram-бота
 const token = process.env.TELEGRAM_BOT_TOKEN;
-const bot = new TelegramBot(token, { polling: true });
+const bot = new TelegramBot(token);
+
+// Настройка Express-сервера
+const app = express();
+app.use(bodyParser.json()); // Для парсинга JSON данных от Telegram
+
+// Устанавливаем Webhook для Telegram-бота
+const webhookUrl = `${process.env.RENDER_EXTERNAL_URL}/bot${token}`; // Используем внешний URL, предоставленный Render
+
+bot.setWebHook(webhookUrl)
+  .then(() => console.log(`Webhook set to ${webhookUrl}`))
+  .catch(err => console.error('Error setting webhook:', err));
+
+// Обработчик запросов от Telegram (для webhook)
+app.post(`/bot${token}`, (req, res) => {
+  bot.processUpdate(req.body); // Обрабатываем обновления от Telegram
+  res.sendStatus(200); // Отправляем ответ Telegram, чтобы он знал, что запрос обработан
+});
 
 // Команда /start
 bot.onText(/\/start/, (msg) => {
@@ -39,6 +58,7 @@ bot.onText(/\/migrate (.+)/, async (msg, match) => {
     bot.sendMessage(chatId, `Ошибка: mint_id обязателен.`);
     return;
   }
+
   try {
     // Добавляем mint_id в базу данных
     const result = await client.query(
@@ -98,3 +118,9 @@ const checkMigrationStatusContinuously = async () => {
 
 // Запуск проверки
 checkMigrationStatusContinuously();
+
+// Указываем порт, предоставленный Render
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});
