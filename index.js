@@ -31,7 +31,7 @@ const token = process.env.TELEGRAM_BOT_TOKEN; // Токен из перемен�
 const bot = new TelegramBot(token, { polling: false }); // Отключаем polling и используем webhook
 
 // Устанавливаем вебхук для получения обновлений от Telegram
-const webhookUrl = `https://yourdomain.com/${process.env.TELEGRAM_BOT_TOKEN}`; // URL вашего хостинга
+const webhookUrl = `process.env.URL/${process.env.TELEGRAM_BOT_TOKEN}`; // URL вашего хостинга
 bot.setWebHook(webhookUrl);
 
 // Обработка команды /start
