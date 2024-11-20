@@ -15,6 +15,6 @@
     "start": "node index.js"
   },
   "engines": {
-    "node": "14.x"
+    "node": "16.20.1"
   }
 }
