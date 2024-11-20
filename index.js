@@ -33,18 +33,25 @@ bot.onText(/\/start/, (msg) => {
 // Команда /migrate $token
 bot.onText(/\/migrate (.+)/, async (msg, match) => {
   const chatId = msg.chat.id;
-  const tokenSymbol = match[1].trim();
+  const mintId = match[1].trim(); // Получаем mint_id из команды
 
+  if (!mintId) {
+    bot.sendMessage(chatId, `Ошибка: mint_id обязателен.`);
+    return;
+  }
   try {
-    // Добавляем токен в базу данных
-    const result = await client.query('INSERT INTO tokens (symbol) VALUES ($1) RETURNING id', [tokenSymbol]);
+    // Добавляем mint_id в базу данных
+    const result = await client.query(
+      'INSERT INTO tokens (mint_id) VALUES ($1) RETURNING id',
+      [mintId]
+    );
     const tokenId = result.rows[0].id;
 
-    bot.sendMessage(chatId, `Токен ${tokenSymbol} добавлен в базу данных. Мы будем проверять его статус.`);
-    console.log(`Токен ${tokenSymbol} добавлен в базу с ID ${tokenId}`);
+    bot.sendMessage(chatId, `Токен ${mintId} добавлен в базу данных.`);
+    console.log(`mint_id ${mintId} добавлен в базу с ID ${tokenId}`);
   } catch (err) {
     console.error('Ошибка добавления токена в базу:', err);
-    bot.sendMessage(chatId, `Ошибка: не удалось добавить токен ${tokenSymbol} в базу данных.`);
+    bot.sendMessage(chatId, `Ошибка: не удалось добавить токен ${mintId}.`);
   }
 });
 
