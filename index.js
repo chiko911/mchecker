@@ -42,7 +42,7 @@ async function checkTokenMigration(token) {
 }
 
 // Обработчик команды от пользователя
-bot.onText(/\/addtoken (\w+)/, async (msg, match) => {
+bot.onText(/\/migrate (\w+)/, async (msg, match) => {
   const chatId = msg.chat.id;
   const token = match[1];  // Получаем токен из сообщения
 
