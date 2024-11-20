@@ -1,71 +1,49 @@
-import pg from 'pg';  // Импортируем pg как default
-const { Client } = pg;  // Извлекаем Client из дефолтного импорта
-import fetch from 'node-fetch'; // Для работы с API
-import TelegramBot from 'node-telegram-bot-api'; // Для Telegram API
+import { Client } from 'pg'; // Для работы с PostgreSQL
+import TelegramBot from 'node-telegram-bot-api'; // Для работы с Telegram ботом
+import express from 'express'; // Для создания HTTP-сервера
+import dotenv from 'dotenv'; // Для работы с переменными окружения
+import fetch from 'node-fetch'; // Для выполнения HTTP-запросов
 
-const token = process.env.TELEGRAM_BOT_TOKEN;  // Укажите токен вашего бота
-const bot = new TelegramBot(token, { polling: true });
+dotenv.config(); // Загружаем переменные из .env
 
-const client = new Client({
-  connectionString: process.env.DATABASE_URL,  // Строка подключения из переменных окружения
+// Настройка подключения к PostgreSQL
+const dbClient = new Client({
+  connectionString: process.env.DATABASE_URL, // Используем переменные окружения для подключения
   ssl: {
-    rejectUnauthorized: false, // Отключаем проверку сертификатов (для использования с Render)
+    rejectUnauthorized: false, // Не проверяем сертификат SSL для PostgreSQL на Render
   },
 });
+dbClient.connect()
+  .then(() => console.log('Connected to PostgreSQL'))
+  .catch((err) => console.error('Connection error', err.stack));
 
-// Слушаем сообщения от пользователей и добавляем токены в базу
-bot.onText(/\/addtoken (.+)/, async (msg, match) => {
+// Создаем Telegram бота
+const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: true });
+
+// Получаем порт из переменной окружения, предоставленной Render, или используем 3000 для локальной разработки
+const port = process.env.PORT || 3000;
+
+// Пример обработки команды бота
+bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
-  const token = match[1];
+  bot.sendMessage(chatId, 'Привет! Я помогу тебе с миграцией токенов.');
+});
 
+// Пример использования API для получения токенов
+app.get('/tokens', async (req, res) => {
   try {
-    // Добавляем токен в базу данных
-    await client.query('INSERT INTO tokens (token, chat_id) VALUES ($1, $2)', [token, chatId]);
-    bot.sendMessage(chatId, `Токен ${token} добавлен для отслеживания.`);
-  } catch (err) {
-    console.error('Ошибка добавления токена:', err);
-    bot.sendMessage(chatId, 'Произошла ошибка при добавлении токена.');
+    const response = await fetch('https://api.raydium.io/tokens'); // Ваш запрос к API
+    const data = await response.json();
+    res.json(data); // Возвращаем ответ с данными
+  } catch (error) {
+    res.status(500).send('Ошибка при получении данных');
   }
 });
 
-// Функция для проверки миграции токенов
-async function checkTokenMigration(token) {
-  const url = `https://api-v3.raydium.io/mint/ids?mints=${token}`;
-  try {
-    const response = await fetch(url);
-    const data = await response.json();
+// Создание Express сервера
+const app = express();
 
-    // Проверка, прошла ли миграция
-    if (data.success && data.data.length > 0) {
-      return true;
-    }
-    return false;
-  } catch (err) {
-    console.error('Ошибка при проверке миграции:', err);
-    return false;
-  }
-}
-
-// Функция для отправки уведомления в Telegram
-async function notifyMigrationSuccess(token, chatId) {
-  const message = `Токен ${token} успешно мигрировал!`;
-  await bot.sendMessage(chatId, message);
-}
-
-// Проверка токенов, добавленных в базу данных
-async function checkAllTokens() {
-  const res = await client.query('SELECT * FROM tokens');
-  for (const row of res.rows) {
-    const { token, chat_id } = row;
-    const migrated = await checkTokenMigration(token);
-    
-    if (migrated) {
-      await notifyMigrationSuccess(token, chat_id);
-      // Удаляем токен из базы после успешной миграции
-      await client.query('DELETE FROM tokens WHERE token = $1', [token]);
-    }
-  }
-}
-
-// Запуск проверки токенов каждую минуту
-setInterval(checkAllTokens, 5000); // Проверяем каждые 60 секунд
+// Стартуем сервер и слушаем на порту
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
+});
