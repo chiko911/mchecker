@@ -7,9 +7,11 @@ const token = process.env.TELEGRAM_BOT_TOKEN;  // Укажите токен ва
 const bot = new TelegramBot(token, { polling: true });
 
 const client = new Client({
-  connectionString: process.env.DATABASE_URL,  // Используем строку подключения из переменных окружения
+  connectionString: process.env.DATABASE_URL,  // Строка подключения из переменных окружения
+  ssl: {
+    rejectUnauthorized: false, // Отключаем проверку сертификатов (для использования с Render)
+  },
 });
-client.connect();
 
 // Слушаем сообщения от пользователей и добавляем токены в базу
 bot.onText(/\/addtoken (.+)/, async (msg, match) => {
