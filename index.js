@@ -28,9 +28,13 @@ client.connect()
 
 // Инициализация Telegram бота
 const token = process.env.TELEGRAM_BOT_TOKEN; // Токен из переменных окружения
-const bot = new TelegramBot(token, { polling: true }); // Инициализируем бот с polling
+const bot = new TelegramBot(token, { polling: false }); // Отключаем polling и используем webhook
 
-// Команда /start
+// Устанавливаем вебхук для получения обновлений от Telegram
+const webhookUrl = `https://yourdomain.com/${process.env.TELEGRAM_BOT_TOKEN}`; // URL вашего хостинга
+bot.setWebHook(webhookUrl);
+
+// Обработка команды /start
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
   const firstName = msg.from.first_name;
@@ -109,6 +113,14 @@ const checkMigrationStatusContinuously = async () => {
 
 // Запуск постоянной проверки статуса миграции
 checkMigrationStatusContinuously();
+
+// Обработка запроса от Telegram через вебхук
+app.use(express.json());
+
+app.post(`/${process.env.TELEGRAM_BOT_TOKEN}`, (req, res) => {
+  bot.processUpdate(req.body); // Обрабатываем входящие обновления
+  res.sendStatus(200); // Отправляем статус 200 в ответ
+});
 
 // Запуск сервера
 app.listen(port, () => {
