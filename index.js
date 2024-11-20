@@ -28,9 +28,9 @@ client.connect()
 
 // Инициализация Telegram бота
 const token = process.env.TELEGRAM_BOT_TOKEN; // Токен из переменных окружения
-const bot = new TelegramBot(token, { polling: true });
+const bot = new TelegramBot(token, { polling: true }); // Инициализируем бот с polling
 
-// Обработка команды /start
+// Команда /start
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
   const firstName = msg.from.first_name;
