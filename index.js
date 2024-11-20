@@ -71,10 +71,11 @@ bot.onText(/\/migrate (.+)/, async (msg, match) => {
     );
     const tokenId = result.rows[0].id;
 
+    // Отправляем сообщение в личку
     bot.sendMessage(chatId, `Токен ${mintId} добавлен в базу данных.`);
     console.log(`mint_id ${mintId} добавлен в базу с ID ${tokenId}`);
 
-    // Отправляем ответ в группу, если это группа
+    // Если запрос из группы, отправляем сообщение в группу
     if (msg.chat.type === 'group' || msg.chat.type === 'supergroup') {
       bot.sendMessage(msg.chat.id, `Токен ${mintId} добавлен в базу данных.`);
     }
