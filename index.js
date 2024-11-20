@@ -1,7 +1,8 @@
 import express from 'express'; // Импортируем express
-import { Client } from 'pg'; // Импортируем pg для работы с PostgreSQL
+import pkg from 'pg'; // Импортируем pg для работы с PostgreSQL
 import TelegramBot from 'node-telegram-bot-api'; // Импортируем Telegram Bot API
 import dotenv from 'dotenv'; // Для работы с переменными окружения
+import fetch from 'node-fetch'; // Для работы с HTTP запросами (Raydium API)
 
 dotenv.config(); // Загружаем переменные из .env файла
 
@@ -9,6 +10,7 @@ const app = express(); // Инициализируем Express приложен�
 const port = process.env.PORT || 3000; // Устанавливаем порт, либо по умолчанию 3000
 
 // Подключение к PostgreSQL
+const { Client } = pkg; // Получаем Client из импорта
 const client = new Client({
   connectionString: process.env.DATABASE_URL, // Строка подключения из переменных окружения
   ssl: {
@@ -37,11 +39,31 @@ bot.onText(/\/start/, (msg) => {
   bot.sendMessage(chatId, greetingMessage);
 });
 
-// Маршрут для получения списка токенов
+// Получение токенов с Raydium API
+const getRaydiumTokens = async () => {
+  const url = 'https://api.raydium.io/v2/serum/tokens'; // Пример API запроса для Raydium
+  try {
+    const response = await fetch(url);
+    const data = await response.json();
+    return data.tokens || [];
+  } catch (error) {
+    console.error('Error fetching Raydium tokens', error);
+    return [];
+  }
+};
+
+// Маршрут для получения списка токенов с Raydium и из базы данных
 app.get('/tokens', async (req, res) => {
   try {
-    const result = await client.query('SELECT * FROM tokens'); // Получаем данные из базы данных
-    res.json(result.rows); // Отправляем данные в виде JSON
+    const raydiumTokens = await getRaydiumTokens(); // Запрос токенов с Raydium
+    const result = await client.query('SELECT * FROM tokens'); // Получаем токены из базы данных PostgreSQL
+    const tokens = result.rows;
+
+    // Отправляем ответ: данные из Raydium API + из базы данных
+    res.json({
+      raydiumTokens,
+      dbTokens: tokens
+    });
   } catch (err) {
     console.error('Error fetching tokens', err);
     res.status(500).send('Error fetching tokens');
