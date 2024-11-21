@@ -103,10 +103,7 @@ bot.onText(/\/migrate (.+)/, async (msg, match) => {
     const tokenId = result.rows[0].id;
 
     // Уведомление в чат, из которого поступил запрос
-    bot.sendMessage(chatId, `Токен с mint_id ${mintId} добавлен в базу данных.`);
-
-    // Уведомление администратора
-    bot.sendMessage(process.env.TELEGRAM_ADMIN_CHAT_ID, `Токен с mint_id ${mintId} был добавлен в базу данных.`);
+    bot.sendMessage(chatId, `Токен ${mintId} добавлен в базу данных.`);
 
     console.log(`mint_id ${mintId} добавлен в базу с ID ${tokenId}`);
   } catch (err) {
@@ -140,9 +137,6 @@ const checkMigrationStatusContinuously = async () => {
       if (migrationStatus.length > 0) {
         console.log(`Токен с mint_id ${row.mint_id} мигрирован!`);
 
-        // Отправляем сообщение в админский чат
-        bot.sendMessage(process.env.TELEGRAM_ADMIN_CHAT_ID, `Токен с mint_id ${row.mint_id} был мигрирован!`);
-
         // Отправляем сообщение в чат, из которого поступил запрос
         bot.sendMessage(row.chat_id, `Токен с mint_id ${row.mint_id} был мигрирован!`);
 
@@ -159,7 +153,7 @@ const checkMigrationStatusContinuously = async () => {
   }
 
   // Повторяем проверку каждые 5 секунд
-  setTimeout(checkMigrationStatusContinuously, 5000);
+  setTimeout(checkMigrationStatusContinuously, 2000);
 };
 
 // Запуск проверки
