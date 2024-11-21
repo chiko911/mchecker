@@ -144,7 +144,7 @@ const checkMigrationStatusContinuously = async () => {
           const photonUrl = `https://photon-sol.tinyastro.io/en/lp/${programId}`;
 
           // Формируем сообщение с inline клавиатурой и форматированием
-          const message = `✅Токен \`\`${mintId}\`\` был мигрирован!`;
+          const message = `✅Токен \`\`${mintId}\`\` был успешно мигрирован!`;
 
           bot.sendMessage(chatId, message, options);  // Отправляем сообщение с клавиатурой
 
