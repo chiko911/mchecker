@@ -146,7 +146,7 @@ const checkMigrationStatusContinuously = async () => {
           // Формируем сообщение с inline клавиатурой и форматированием
           const message = `✅Токен \`\`${mintId}\`\` был успешно мигрирован!`;
 
-          bot.sendMessage(chatId, message, options);  // Отправляем сообщение с клавиатурой
+          bot.sendMessage(chatId, message);  // Отправляем сообщение с клавиатурой
 
           // Удаляем токен из базы
           await client.query('DELETE FROM tokens WHERE mint_id = $1', [mintId]);
