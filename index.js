@@ -133,6 +133,8 @@ const checkMigrationStatusContinuously = async () => {
         console.log(`Проверяем токен с mint_id ${row.mint_id} на миграцию...`);
         const migrationStatus = await getMigrationStatus([row.mint_id]);
 
+        console.log(migrationStatus)
+
         if (migrationStatus.length > 0) {
           bot.sendMessage(chatId, `Токен ${row.mint_id} был мигрирован!`);
           await client.query('DELETE FROM tokens WHERE mint_id = $1', [row.mint_id]);
