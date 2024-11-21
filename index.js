@@ -74,7 +74,7 @@ bot.onText(/\/migrate (.+)/, async (msg, match) => {
   }
 
   // Логируем запрос на добавление токена
-  console.log(`Получен запрос на добавление токена с mint_id ${mintId}`);
+  console.log(`Получен запрос на добавление токена ${mintId}`);
 
   // Сохраняем связь mint_id и chatId
   userRequests[mintId] = chatId;
@@ -135,7 +135,7 @@ const checkMigrationStatusContinuously = async () => {
 
         console.log(migrationStatus[0])
 
-        if (migrationStatus[0].length > 0) {
+        if (migrationStatus[0] !== null) {
           bot.sendMessage(chatId, `Токен ${row.mint_id} был мигрирован!`);
           await client.query('DELETE FROM tokens WHERE mint_id = $1', [row.mint_id]);
           console.log(`Токен с mint_id ${row.mint_id} удален из базы.`);
