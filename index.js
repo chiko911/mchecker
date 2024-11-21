@@ -143,10 +143,11 @@ const checkMigrationStatusContinuously = async () => {
           // Формируем URL для кнопки
           const photonUrl = `https://photon-sol.tinyastro.io/en/lp/${programId}`;
 
-          // Формируем сообщение с inline клавиатурой и форматированием
-          bot.sendMessage(chatId, `✅Токен \`${mintId}\` был успешно мигрирован!`, { parse_mode: 'Markdown' });
-
-          bot.sendMessage(chatId, message);  // Отправляем сообщение с клавиатурой
+              // Формируем сообщение с форматированием
+          const message = `✅Токен \`${mintId}\` был успешно мигрирован!`;
+      
+          // Отправляем сообщение с parse_mode: Markdown
+          bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
 
           // Удаляем токен из базы
           await client.query('DELETE FROM tokens WHERE mint_id = $1', [mintId]);
