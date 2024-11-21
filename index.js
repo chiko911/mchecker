@@ -42,22 +42,15 @@ app.post(`/bot${token}`, (req, res) => {
   res.sendStatus(200); // Отправляем ответ Telegram, чтобы он знал, что запрос обработан
 });
 
-// Команда /start с кнопками
+// Маппинг mint_id -> chatId
+const userRequests = {};
+
+// Команда /start (уже без кнопок)
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
   const firstName = msg.from.first_name || 'друг';
 
-  const options = {
-    reply_markup: {
-      inline_keyboard: [
-        [
-          { text: 'Начать миграцию токенов', callback_data: 'migrate' },
-        ]
-      ]
-    }
-  };
-
-  bot.sendMessage(chatId, `Привет, ${firstName}! Я помогу тебе с миграцией токенов. Чем могу помочь?`, options);
+  bot.sendMessage(chatId, `Привет, ${firstName}! Я помогу тебе с миграцией токенов. Для выполнения миграции используйте команду /migrate.`);
 });
 
 // Обработка команды /migrate
@@ -79,9 +72,12 @@ bot.onText(/\/migrate (.+)/, async (msg, match) => {
     bot.sendMessage(chatId, `Ошибка: mint_id обязателен.`);
     return;
   }
-  
+
   // Логируем запрос на добавление токена
   console.log(`Получен запрос на добавление токена с mint_id ${mintId}`);
+
+  // Сохраняем связь mint_id и chatId
+  userRequests[mintId] = chatId;
 
   // Проверяем, существует ли уже токен в базе
   const existingTokenResult = await client.query(
@@ -120,7 +116,7 @@ const getMigrationStatus = async (mintIds) => {
     const data = await response.json();
     return data.data || [];
   } catch (error) {
-    console.error('Error fetching migration status from Raydium', error);
+    console.error('Error fetching migration status from Raydium:', error.message);
     return [];
   }
 };
@@ -131,20 +127,17 @@ const checkMigrationStatusContinuously = async () => {
     const result = await client.query('SELECT mint_id FROM tokens');
 
     for (const row of result.rows) {
-      console.log(`Проверяем токен с mint_id ${row.mint_id} на миграцию...`);
-      const migrationStatus = await getMigrationStatus([row.mint_id]);
+      const chatId = userRequests[row.mint_id];  // Получаем chatId для данного mint_id
 
-      console.log(migrationStatus)
+      if (chatId) {  // Если chatId найден, отправляем сообщение
+        console.log(`Проверяем токен с mint_id ${row.mint_id} на миграцию...`);
+        const migrationStatus = await getMigrationStatus([row.mint_id]);
 
-      if (migrationStatus.length > 0) {
-        console.log(`Токен с mint_id ${row.mint_id} мигрирован!`);
-
-        // Отправляем сообщение в чат, из которого поступил запрос
-        bot.sendMessage(chatId, `Токен с mint_id ${row.mint_id} был мигрирован!`);
-
-        // Удаляем токен из базы данных
-        await client.query('DELETE FROM tokens WHERE mint_id = $1', [row.mint_id]);
-        console.log(`Токен с mint_id ${row.mint_id} удален из базы.`);
+        if (migrationStatus.length > 0) {
+          bot.sendMessage(chatId, `Токен с mint_id ${row.mint_id} был мигрирован!`);
+          await client.query('DELETE FROM tokens WHERE mint_id = $1', [row.mint_id]);
+          console.log(`Токен с mint_id ${row.mint_id} удален из базы.`);
+        }
       }
 
       // Пауза между проверками каждого токена
@@ -154,7 +147,7 @@ const checkMigrationStatusContinuously = async () => {
     console.error('Ошибка в проверке миграции токенов:', error);
   }
 
-  // Повторяем проверку каждые 5 секунд
+  // Повторяем проверку каждые 2 секунды
   setTimeout(checkMigrationStatusContinuously, 2000);
 };
 
