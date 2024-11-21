@@ -99,7 +99,7 @@ bot.onText(/\/migrate (.+)/, async (msg, match) => {
     const tokenId = result.rows[0].id;
 
     // Уведомление в чат, из которого поступил запрос
-    bot.sendMessage(chatId, `Токен ${mintId} добавлен в базу данных.`);
+    bot.sendMessage(chatId, `🕔Токен ${mintId} добавлен в базу данных.`);
 
     console.log(`mint_id ${mintId} добавлен в базу с ID ${tokenId}`);
   } catch (err) {
@@ -131,7 +131,7 @@ const checkMigrationStatusContinuously = async () => {
       const chatId = userRequests[row.mint_id];  // Получаем chatId для данного mint_id
 
       if (chatId) {  // Если chatId найден, отправляем сообщение
-        console.log(`🕔Проверяем токен с mint_id ${row.mint_id} на миграцию...`);
+        console.log(`Проверяем токен с mint_id ${row.mint_id} на миграцию...`);
         const migrationStatus = await getMigrationStatus([row.mint_id]);
 
         console.log(migrationStatus[0]);
@@ -144,7 +144,7 @@ const checkMigrationStatusContinuously = async () => {
           const photonUrl = `https://photon-sol.tinyastro.io/en/lp/${programId}`;
 
           // Формируем сообщение с inline клавиатурой и форматированием
-          const message = `✅Токен [${mintId}](tg://resolve?domain=${mintId}) был мигрирован!`;
+          const message = `✅Токен \`\`${mintId}\`\` был мигрирован!`;
 
           // Отправляем сообщение с кнопкой
           const options = {
