@@ -136,11 +136,36 @@ const checkMigrationStatusContinuously = async () => {
         console.log(migrationStatus[0])
 
         if (migrationStatus[0] !== null) {
-          bot.sendMessage(chatId, `Токен ${row.mint_id} был мигрирован!`);
-          await client.query('DELETE FROM tokens WHERE mint_id = $1', [row.mint_id]);
-          console.log(`Токен с mint_id ${row.mint_id} удален из базы.`);
-        }
-      }
+  const mintId = row.mint_id;  // mint_id токена
+  const programId = migrationStatus[0].programId;  // Получаем programId из ответа
+
+  // Формируем URL для кнопки
+  const photonUrl = `https://photon-sol.tinyastro.io/en/lp/${programId}`;
+
+  // Формируем сообщение с inline клавиатурой и форматированием
+  const message = `Токен [${mintId}](tg://resolve?domain=${mintId}) был мигрирован!`;
+
+  // Отправляем сообщение с кнопкой
+  const options = {
+    reply_markup: {
+      inline_keyboard: [
+        [
+          {
+            text: '🌟 Photon',  // Кнопка с золотой звездой
+            url: photonUrl  // Ссылка на Photon с programId
+          }
+        ]
+      ]
+    }
+  };
+
+  bot.sendMessage(chatId, message, options);  // Отправляем сообщение с клавиатурой
+
+  // Удаляем токен из базы
+  await client.query('DELETE FROM tokens WHERE mint_id = $1', [mintId]);
+  console.log(`Токен с mint_id ${mintId} удален из базы.`);
+}
+
 
       // Пауза между проверками каждого токена
       await new Promise(resolve => setTimeout(resolve, 500));
