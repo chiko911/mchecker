@@ -23,7 +23,7 @@ client.connect()
 
 // Инициализация Telegram-бота
 const token = process.env.TELEGRAM_BOT_TOKEN;
-const bot = new TelegramBot(token, { polling: true });
+const bot = new TelegramBot(token);
 
 // Настройка Express-сервера
 const app = express();
