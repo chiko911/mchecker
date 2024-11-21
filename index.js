@@ -134,6 +134,8 @@ const checkMigrationStatusContinuously = async () => {
       console.log(`Проверяем токен с mint_id ${row.mint_id} на миграцию...`);
       const migrationStatus = await getMigrationStatus([row.mint_id]);
 
+      console.log(migrationStatus)
+
       if (migrationStatus.length > 0) {
         console.log(`Токен с mint_id ${row.mint_id} мигрирован!`);
 
